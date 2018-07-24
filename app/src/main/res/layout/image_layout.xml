@@ -1,0 +1,28 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/dialogImages"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@android:color/transparent"
+    android:cacheColorHint="@android:color/transparent"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/nameFamily"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_above="@id/multipleImageFamily"
+        android:textColor="#fff"
+        android:textSize="21sp"
+        android:textStyle="bold"
+        tools:text="Guevara" />
+
+    <com.stfalcon.multiimageview.MultiImageView
+        android:id="@+id/multipleImageFamily"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:scaleType="centerCrop" />
+</RelativeLayout>
