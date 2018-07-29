@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "907563048606",
+    "firebase_url": "https://fir-maboiteauxlettres.firebaseio.com",
+    "project_id": "firebase-maboiteauxlettres",
+    "storage_bucket": "firebase-maboiteauxlettres.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:907563048606:android:02a5eba31f75171d",
+        "android_client_info": {
+          "package_name": "com.sourcey.mbal"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "907563048606-inbp74pdtf2fnp3asijqdthj7h33jq4g.apps.googleusercontent.com",
+          "client_type": 3
+        },
+        {
+          "client_id": "907563048606-4m4hrinprul1tieoh50fm78ci9mn7p0k.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJwqzhcWfcW_R8giUCY8B_5Ui9xpXYaA8"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

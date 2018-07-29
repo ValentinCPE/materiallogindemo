@@ -19,18 +19,18 @@ import com.google.firebase.messaging.RemoteMessage;
 import com.sourcey.mbal.MainActivity;
 import com.sourcey.mbal.R;
 
+import java.util.Objects;
+
 import static android.content.ContentValues.TAG;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
     @Override
     public void onMessageReceived(RemoteMessage remoteMessage) {
-        //Displaying data in log
-        //It is optional
-        Log.d(TAG, "Notification Message Body: " + remoteMessage.getData().get("message"));
 
         //Calling method to generate notification
-        sendNotification(remoteMessage.getData().get("message"));
+        sendNotification(Objects.requireNonNull(remoteMessage.getNotification()).getBody());
+
     }
 
     //This method is only generating push notification

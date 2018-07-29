@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.app.Service;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -14,19 +15,25 @@ import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.sourcey.mbal.service.HttpRequestAsyncTaskJson;
 import com.sourcey.mbal.service.HttpRequestGetAsyncTask;
+import com.sourcey.mbal.service.HttpRequestGetAsyncTaskJsonArray;
 import com.sourcey.mbal.service.PropertiesReader;
 import com.sourcey.mbal.service.firebase.MyFirebaseInstanceIDService;
 
+import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+
 import butterknife.ButterKnife;
 import butterknife.Bind;
 
@@ -34,10 +41,14 @@ public class LoginActivity extends AppCompatActivity {
     private static final String TAG = "LoginActivity";
     private static final int REQUEST_SIGNUP = 0;
 
-    @Bind(R.id.input_email) EditText _emailText;
-    @Bind(R.id.input_password) EditText _passwordText;
-    @Bind(R.id.btn_login) Button _loginButton;
-    @Bind(R.id.link_signup) TextView _signupLink;
+    @Bind(R.id.input_email)
+    EditText _emailText;
+    @Bind(R.id.input_password)
+    EditText _passwordText;
+    @Bind(R.id.btn_login)
+    Button _loginButton;
+    @Bind(R.id.link_signup)
+    TextView _signupLink;
 
     SharedPreferences sharedPref;
     SharedPreferences.Editor editor;
@@ -45,12 +56,15 @@ public class LoginActivity extends AppCompatActivity {
     private String response;
     private String responseCode;
 
+    private String token, username;
+    private JSONObject jsonUser;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
         ButterKnife.bind(this);
-        
+
         _loginButton.setOnClickListener(v -> login());
 
         _signupLink.setOnClickListener(v -> {
@@ -61,21 +75,27 @@ public class LoginActivity extends AppCompatActivity {
             overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
         });
 
-        sharedPref=getSharedPreferences("mbal", Context.MODE_PRIVATE);
-        editor=sharedPref.edit();
+        sharedPref = getSharedPreferences("mbal", Context.MODE_PRIVATE);
+        editor = sharedPref.edit();
 
-        if(!sharedPref.getString("username","").equals("")){
+        //TODO: Mot de passe oublié
+
+        this.token = sharedPref.getString("token", "");
+        this.username = sharedPref.getString("username", "");
+
+
+        if (!this.username.equals("")) {
             List<String> requestParameters = new ArrayList<>();
             requestParameters.add("Authorization");
-            requestParameters.add("Bearer "+sharedPref.getString("token",""));
+            requestParameters.add("Bearer " + this.token);
             HttpRequestAsyncTaskJson httpRequestAsyncTask = new HttpRequestAsyncTaskJson(requestParameters);
             httpRequestAsyncTask.execute(PropertiesReader.properties.getProperty("url") +
-                    "api/user/login?username="+sharedPref.getString("username","")+"&password="+sharedPref.getString("password",""));
+                    "api/user/login?username=" + this.username + "&password=" + sharedPref.getString("password", ""));
 
             try {
                 response = (String) httpRequestAsyncTask.get().get("response");
 
-                if(response.contains("-")){
+                if (response.contains("-")) {
                     editor.putString("sessionId", response);
                     editor.commit();
                     onLoginSuccess();
@@ -105,7 +125,7 @@ public class LoginActivity extends AppCompatActivity {
         final ProgressDialog progressDialog = new ProgressDialog(LoginActivity.this,
                 R.style.AppTheme_Dark_Dialog);
         progressDialog.setIndeterminate(true);
-        progressDialog.setMessage("Authenticating...");
+        progressDialog.setMessage("Connexion...");
         progressDialog.show();
 
         final String email = _emailText.getText().toString();
@@ -113,10 +133,10 @@ public class LoginActivity extends AppCompatActivity {
 
         List<String> requestParameters = new ArrayList<>();
         requestParameters.add("Authorization");
-        requestParameters.add("Bearer "+sharedPref.getString("token",""));
+        requestParameters.add("Bearer " + sharedPref.getString("token", ""));
         HttpRequestAsyncTaskJson httpRequestAsyncTask = new HttpRequestAsyncTaskJson(requestParameters);
         httpRequestAsyncTask.execute(PropertiesReader.properties.getProperty("url") +
-                "api/user/login?username="+email+"&password="+password+"&client=ANDROID");
+                "api/user/login?username=" + email + "&password=" + password + "&client=ANDROID");
 
         try {
             response = (String) httpRequestAsyncTask.get().get("response");
@@ -131,16 +151,16 @@ public class LoginActivity extends AppCompatActivity {
 
         new android.os.Handler().postDelayed(
                 () -> {
-                    if(response.contains("-")){
-                        editor.putString("username",email);
-                        editor.putString("password",password);
+                    if (response.contains("-")) {
+                        editor.putString("username", email);
+                        editor.putString("password", password);
                         editor.putString("sessionId", response);
                         editor.commit();
                         onLoginSuccess();
-                    }else if(response.equals("Vous n'avez pas activé votre compte !")){
-                        Toast.makeText(LoginActivity.this, "Vous devez tout d'abord activer votre compte !",Toast.LENGTH_LONG).show();
+                    } else if (response.equals("Vous n'avez pas activé votre compte !")) {
+                        Toast.makeText(LoginActivity.this, "Vous devez tout d'abord activer votre compte !", Toast.LENGTH_LONG).show();
                         showDialogActivation();
-                    }else{
+                    } else {
                         onLoginFailed();
                     }
                     progressDialog.dismiss();
@@ -164,17 +184,43 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     public void onLoginSuccess() {
-        String refreshedToken = FirebaseInstanceId.getInstance().getToken();
-        MyFirebaseInstanceIDService.sendRegistrationToServer(refreshedToken, sharedPref);
+        List<String> requestParameters = new ArrayList<>();
+        requestParameters.add("Authorization");
+        requestParameters.add("Bearer " + this.token);
 
-        _loginButton.setEnabled(true);
-        Intent intent = new Intent(this, MainActivity.class);
-        startActivity(intent);
-        finish();
+        HttpRequestAsyncTaskJson httpRequestAsyncTaskUser = new HttpRequestAsyncTaskJson(requestParameters);
+        httpRequestAsyncTaskUser.execute(PropertiesReader.properties.getProperty("url") +
+                "api/user/getUserByName?username=" + this.username);
+
+        try {
+            this.jsonUser = httpRequestAsyncTaskUser.get();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            if (this.jsonUser != null) {
+                if(this.jsonUser.getJSONObject("family") == null) {
+                    this.noFamily();
+                }else{
+                    String refreshedToken = FirebaseInstanceId.getInstance().getToken();
+                    MyFirebaseInstanceIDService.sendRegistrationToServer(refreshedToken, sharedPref);
+
+                    _loginButton.setEnabled(true);
+                    Intent intent = new Intent(this, MainActivity.class);
+                    startActivity(intent);
+                    finish();
+                }
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
     public void onLoginFailed() {
-        Toast.makeText(getBaseContext(), "Erreur de connexion : "+response, Toast.LENGTH_LONG).show();
+        Toast.makeText(getBaseContext(), "Erreur de connexion : " + response, Toast.LENGTH_LONG).show();
 
         _loginButton.setEnabled(true);
     }
@@ -202,7 +248,7 @@ public class LoginActivity extends AppCompatActivity {
         return valid;
     }
 
-    private void showDialogActivation(){
+    private void showDialogActivation() {
         LayoutInflater inflater = getLayoutInflater();
         View alertLayout = inflater.inflate(R.layout.activation_signup, null);
 
@@ -218,8 +264,8 @@ public class LoginActivity extends AppCompatActivity {
         alert.setNegativeButton("Annuler", (dialog, which) -> Toast.makeText(getBaseContext(), "Activation annulée", Toast.LENGTH_SHORT).show());
 
         alert.setPositiveButton("Activer", (dialog, which) -> {
-            String code = mPinFirstDigitEditText.getText().toString()+mPinSecondDigitEditText.getText().toString()+
-                    mPinThirdDigitEditText.getText().toString()+mPinForthDigitEditText.getText().toString();
+            String code = mPinFirstDigitEditText.getText().toString() + mPinSecondDigitEditText.getText().toString() +
+                    mPinThirdDigitEditText.getText().toString() + mPinForthDigitEditText.getText().toString();
 
             final ProgressDialog progressDialog = new ProgressDialog(LoginActivity.this,
                     R.style.AppTheme_Dark_Dialog);
@@ -229,10 +275,10 @@ public class LoginActivity extends AppCompatActivity {
 
             List<String> requestParameters = new ArrayList<>();
             requestParameters.add("Authorization");
-            requestParameters.add("Bearer "+sharedPref.getString("token",""));
+            requestParameters.add("Bearer " + sharedPref.getString("token", ""));
             HttpRequestGetAsyncTask httpRequestAsyncTask = new HttpRequestGetAsyncTask(requestParameters);
             httpRequestAsyncTask.execute(PropertiesReader.properties.getProperty("url") +
-                    "api/user/activateByPhone/"+code);
+                    "api/user/activateByPhone/" + code);
 
             try {
                 responseCode = httpRequestAsyncTask.get();
@@ -246,10 +292,10 @@ public class LoginActivity extends AppCompatActivity {
             new android.os.Handler().postDelayed(
                     () -> {
 
-                        if(responseCode.equals("OK")){
+                        if (responseCode.equals("OK")) {
                             login();
-                        }else {
-                            Toast.makeText(LoginActivity.this,"Le code renseigné n'est pas correct !",Toast.LENGTH_SHORT).show();
+                        } else {
+                            Toast.makeText(LoginActivity.this, "Le code renseigné n'est pas correct !", Toast.LENGTH_SHORT).show();
                         }
                         progressDialog.dismiss();
                     }, 3000);
@@ -262,7 +308,7 @@ public class LoginActivity extends AppCompatActivity {
             mPinFirstDigitEditText.setFocusable(true);
             mPinFirstDigitEditText.setFocusableInTouchMode(true);
             mPinFirstDigitEditText.requestFocus();
-            imm.showSoftInput(mPinFirstDigitEditText,0);
+            imm.showSoftInput(mPinFirstDigitEditText, 0);
 
             mPinFirstDigitEditText.setOnKeyListener((v, keyCode, event) -> {
                 char pressedKey = (char) event.getUnicodeChar();
@@ -270,7 +316,7 @@ public class LoginActivity extends AppCompatActivity {
                 mPinSecondDigitEditText.setFocusable(true);
                 mPinSecondDigitEditText.setFocusableInTouchMode(true);
                 mPinSecondDigitEditText.requestFocus();
-                imm.showSoftInput(mPinSecondDigitEditText,0);
+                imm.showSoftInput(mPinSecondDigitEditText, 0);
                 return true;
             });
 
@@ -280,7 +326,7 @@ public class LoginActivity extends AppCompatActivity {
                 mPinThirdDigitEditText.setFocusable(true);
                 mPinThirdDigitEditText.setFocusableInTouchMode(true);
                 mPinThirdDigitEditText.requestFocus();
-                imm.showSoftInput(mPinThirdDigitEditText,0);
+                imm.showSoftInput(mPinThirdDigitEditText, 0);
                 return true;
             });
 
@@ -290,7 +336,7 @@ public class LoginActivity extends AppCompatActivity {
                 mPinForthDigitEditText.setFocusable(true);
                 mPinForthDigitEditText.setFocusableInTouchMode(true);
                 mPinForthDigitEditText.requestFocus();
-                imm.showSoftInput(mPinForthDigitEditText,0);
+                imm.showSoftInput(mPinForthDigitEditText, 0);
                 return true;
             });
 
@@ -298,10 +344,155 @@ public class LoginActivity extends AppCompatActivity {
                 char pressedKey = (char) event.getUnicodeChar();
                 mPinForthDigitEditText.setText(pressedKey + "");
                 InputMethodManager imm1 = (InputMethodManager) getSystemService(Service.INPUT_METHOD_SERVICE);
-                imm1.hideSoftInputFromInputMethod(mPinForthDigitEditText.getWindowToken(),0);
+                imm1.hideSoftInputFromInputMethod(mPinForthDigitEditText.getWindowToken(), 0);
                 return true;
             });
         });
         dialog.show();
     }
+
+    private void noFamily(){
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage("Vous devez faire partie d'une famille pour utiliser les services de MBAL")
+                .setTitle("Famille")
+                .setPositiveButton("Créer", (dialog, which) -> createFamily())
+                .setNegativeButton("Rejoindre", (dialog, which) -> joinFamily());
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+    private void createFamily(){
+        AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
+        alertDialog.setTitle("Créer sa famille");
+        alertDialog.setMessage("Entrez les informations relatives à votre nouvelle famille.");
+
+        final EditText input = new EditText(this);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT);
+        input.setLayoutParams(lp);
+        alertDialog.setView(input);
+
+        alertDialog.setPositiveButton("Créer",
+                (dialog, which) -> {
+                    String password = input.getText().toString();
+                    if(password.compareTo("") == 0) {
+                        List<String> requestParametersFamily = new ArrayList<>();
+                        requestParametersFamily.add("Authorization");
+                        requestParametersFamily.add("Bearer " + sharedPref.getString("token", ""));
+
+                        HttpRequestGetAsyncTaskJsonArray httpRequestAsyncTaskUser = new HttpRequestGetAsyncTaskJsonArray(requestParametersFamily);
+                        httpRequestAsyncTaskUser.execute(PropertiesReader.properties.getProperty("url") +
+                                "api/family/getAllFamilies");
+
+                        try {
+                            JSONArray jsonArray = httpRequestAsyncTaskUser.get();
+
+                            for(int i = 0; i < jsonArray.length(); i++){
+                                if(jsonArray.getJSONObject(i).getString("name").equals(/*name family*/)){
+
+                                }
+                            }
+
+                        }catch(Exception e){
+                            e.printStackTrace();
+                        }
+
+
+                    }
+                });
+    }
+
+    private void createFamily() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(SignupActivity.this);
+
+        LayoutInflater inflater = getLayoutInflater();
+        View alertLayout = inflater.inflate(R.layout.dialog_signup, null);
+
+        final TextView family = (TextView) alertLayout.findViewById(R.id.family);
+        final EditText password = (EditText) alertLayout.findViewById(R.id.password);
+        final EditText retaperPassword = (EditText) alertLayout.findViewById(R.id.retaperPassword);
+
+        family.setText(autoCompleteTextView.getText().toString());
+
+        builder.setView(alertLayout)
+                .setPositiveButton("OK", (DialogInterface dialog, int id) -> {
+
+                    if (retaperPassword.getText().toString().equals(password.getText().toString())) {
+                        List<String> requestParameters = new ArrayList<>();
+                        requestParameters.add("Authorization");
+                        requestParameters.add("Bearer " + sharedPref.getString("token", ""));
+                        HttpRequestAsyncTaskJson httpRequestAsyncTask = new HttpRequestAsyncTaskJson(requestParameters);
+                        httpRequestAsyncTask.execute(PropertiesReader.properties.getProperty("url") +
+                                "api/family/createFamily?familyname=" + autoCompleteTextView.getText().toString() + "&password=" + password.getText().toString() + "&session_id=" + sharedPref.getString("sessionId", ""));
+
+                        try {
+                            response = (String) httpRequestAsyncTask.get().get("response");
+
+                            if (response.equals("OK")) {
+                                startActivity(new Intent(SignupActivity.this, MainActivity.class));
+                                finish();
+                            } else {
+                                Toast.makeText(this, response, Toast.LENGTH_LONG).show();
+                            }
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        } catch (ExecutionException e) {
+                            e.printStackTrace();
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        Toast.makeText(this, "Les mots de passe ne sont pas les mêmes ! Impossible de créer cette famille", Toast.LENGTH_LONG).show();
+                    }
+                });
+        builder.create().show();
+    }
+
+    private void joinFamily() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(SignupActivity.this);
+
+        LayoutInflater inflater = getLayoutInflater();
+        View alertLayout = inflater.inflate(R.layout.dialog_signup, null);
+
+        final TextView family = (TextView) alertLayout.findViewById(R.id.family);
+        final EditText password = (EditText) alertLayout.findViewById(R.id.password);
+        final EditText retaperPassword = (EditText) alertLayout.findViewById(R.id.retaperPassword);
+
+        family.setText(autoCompleteTextView.getText().toString());
+        retaperPassword.setVisibility(View.INVISIBLE);
+
+        builder.setView(alertLayout)
+                .setPositiveButton("OK", (dialog, id) -> {
+
+                    List<String> requestParameters = new ArrayList<>();
+                    requestParameters.add("Authorization");
+                    requestParameters.add("Bearer " + sharedPref.getString("token", ""));
+                    HttpRequestAsyncTaskJson httpRequestAsyncTask = new HttpRequestAsyncTaskJson(requestParameters);
+                    httpRequestAsyncTask.execute(PropertiesReader.properties.getProperty("url") +
+                            "api/user/setFamilyForUser?username=" + _emailText.getText().toString() + "&name_family=" + autoCompleteTextView.getText().toString() + "&password_family=" + password.getText().toString());
+
+                    try {
+                        response = (String) httpRequestAsyncTask.get().get("response");
+
+                        if (response.equals("OK")) {
+                            startActivity(new Intent(SignupActivity.this, MainActivity.class));
+                            finish();
+                        } else {
+                            Toast.makeText(this, "Le mot de passe saisi n'est pas le bon ! Réessayez ou revenez en arrière pour créer une famille.", Toast.LENGTH_LONG).show();
+                        }
+
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+
+                });
+        builder.create().show();
+
+    }
+    //TODO : MBAL create user and setfamily
 }

@@ -1,5 +1,6 @@
 package com.sourcey.mbal;
 
+import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -68,8 +69,12 @@ public class LaunchActivity  extends AppCompatActivity {
         }else{
             loginButton.setEnabled(false);
             signupButton.setEnabled(false);
-            Toast.makeText(LaunchActivity.this, "Vous n'êtes pas connectés à Internet :(",Toast.LENGTH_LONG).show();
-        }
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setMessage("Nous ne parvenons pas à joindre le serveur ! Réessayez plus tard !")
+                    .setPositiveButton("Quitter", (dialog, which) -> System.exit(0))
+                    .setIcon(R.drawable.logo);
+            builder.create();
+            builder.show();        }
 
         loginButton.setOnClickListener(v -> {
             startActivity(new Intent(LaunchActivity.this, LoginActivity.class));

@@ -22,6 +22,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import com.sourcey.mbal.service.HttpRequestAsyncTask;
 import com.sourcey.mbal.service.HttpRequestAsyncTaskJson;
 import com.sourcey.mbal.service.HttpRequestGetAsyncTask;
@@ -36,21 +37,31 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+
 import butterknife.ButterKnife;
 import butterknife.Bind;
 
 public class SignupActivity extends FragmentActivity {
     private static final String TAG = "SignupActivity";
 
-    @Bind(R.id.input_name) EditText _nameText;
-    @Bind(R.id.input_prenom) EditText _prenomText;
-    @Bind(R.id.input_email) EditText _emailText;
-    @Bind(R.id.input_mobile) EditText _mobileText;
-    @Bind(R.id.input_password) EditText _passwordText;
-    @Bind(R.id.input_reEnterPassword) EditText _reEnterPasswordText;
-    @Bind(R.id.btn_signup) Button _signupButton;
-    @Bind(R.id.link_login) TextView _loginLink;
-    @Bind(R.id.autoCompleteTextView) AutoCompleteTextView autoCompleteTextView;
+    @Bind(R.id.input_name)
+    EditText _nameText;
+    @Bind(R.id.input_prenom)
+    EditText _prenomText;
+    @Bind(R.id.input_email)
+    EditText _emailText;
+    @Bind(R.id.input_mobile)
+    EditText _mobileText;
+    @Bind(R.id.input_password)
+    EditText _passwordText;
+    @Bind(R.id.input_reEnterPassword)
+    EditText _reEnterPasswordText;
+    @Bind(R.id.btn_signup)
+    Button _signupButton;
+    @Bind(R.id.link_login)
+    TextView _loginLink;
+    @Bind(R.id.autoCompleteTextView)
+    AutoCompleteTextView autoCompleteTextView;
 
     SharedPreferences sharedPref;
     SharedPreferences.Editor editor;
@@ -59,21 +70,21 @@ public class SignupActivity extends FragmentActivity {
     private String responseCode;
 
     private List<String> namesFamily;
-    
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_signup);
         ButterKnife.bind(this);
 
-        sharedPref= getSharedPreferences("mbal", Context.MODE_PRIVATE);
-        editor=sharedPref.edit();
+        sharedPref = getSharedPreferences("mbal", Context.MODE_PRIVATE);
+        editor = sharedPref.edit();
 
         _signupButton.setOnClickListener(v -> signup());
 
         _loginLink.setOnClickListener(v -> {
             // Finish the registration screen and return to the Login activity
-            Intent intent = new Intent(getApplicationContext(),LoginActivity.class);
+            Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
             startActivity(intent);
             finish();
             overridePendingTransition(R.anim.push_left_in, R.anim.push_left_out);
@@ -81,7 +92,7 @@ public class SignupActivity extends FragmentActivity {
 
         List<String> requestParametersFamily = new ArrayList<>();
         requestParametersFamily.add("Authorization");
-        requestParametersFamily.add("Bearer " + sharedPref.getString("token",""));
+        requestParametersFamily.add("Bearer " + sharedPref.getString("token", ""));
 
         HttpRequestGetAsyncTaskJsonArray httpRequestAsyncTaskUser = new HttpRequestGetAsyncTaskJsonArray(requestParametersFamily);
         httpRequestAsyncTaskUser.execute(PropertiesReader.properties.getProperty("url") +
@@ -92,7 +103,7 @@ public class SignupActivity extends FragmentActivity {
 
             this.namesFamily = new ArrayList<>();
 
-            for(int i = 0; i < jsonArray.length(); i++){
+            for (int i = 0; i < jsonArray.length(); i++) {
                 this.namesFamily.add(jsonArray.getJSONObject(i).getString("name"));
             }
 
@@ -135,30 +146,30 @@ public class SignupActivity extends FragmentActivity {
         String password = _passwordText.getText().toString();
         String reEnterPassword = _reEnterPasswordText.getText().toString();
 
-        if(name.endsWith(" ")){
-            name = name.substring(0,name.length()-1);
+        if (name.endsWith(" ")) {
+            name = name.substring(0, name.length() - 1);
         }
 
-        if(prenom.endsWith(" ")){
-            prenom = prenom.substring(0,prenom.length()-1);
+        if (prenom.endsWith(" ")) {
+            prenom = prenom.substring(0, prenom.length() - 1);
         }
 
-        if(email.endsWith(" ")){
-            email = email.substring(0,email.length()-1);
+        if (email.endsWith(" ")) {
+            email = email.substring(0, email.length() - 1);
         }
 
-        if(mobile.endsWith(" ")){
-            mobile = mobile.substring(0,mobile.length()-1);
+        if (mobile.endsWith(" ")) {
+            mobile = mobile.substring(0, mobile.length() - 1);
         }
 
 
         List<String> requestParameters = new ArrayList<>();
         requestParameters.add("Authorization");
-        requestParameters.add("Bearer "+sharedPref.getString("token",""));
-        HttpRequestAsyncTask httpRequestAsyncTask = new HttpRequestAsyncTask(requestParameters,"POST");
+        requestParameters.add("Bearer " + sharedPref.getString("token", ""));
+        HttpRequestAsyncTask httpRequestAsyncTask = new HttpRequestAsyncTask(requestParameters, "POST");
         httpRequestAsyncTask.execute(PropertiesReader.properties.getProperty("url") +
-                "api/user/createByMobileApp?name="+name+"&prenom="+prenom+"&mail="+email+"&password="+password+"&" +
-                "num_tel="+mobile+"&role=USER");
+                "api/user/createByMobileApp?name=" + name + "&prenom=" + prenom + "&mail=" + email + "&password=" + password + "&" +
+                "num_tel=" + mobile + "&role=USER");
 
         try {
             response = httpRequestAsyncTask.get();
@@ -172,127 +183,21 @@ public class SignupActivity extends FragmentActivity {
                 () -> {
                     // On complete call either onSignupSuccess or onSignupFailed
                     // depending on success
-                    if(response.equals("OK")){
+                    if (response.equals("OK")) {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                             onSignupSuccess();
                         }
-                    }else{
+                    } else {
                         onSignupFailed();
                     }
                     progressDialog.dismiss();
                 }, 3000);
     }
 
-    private void joinOrCreateFamily(){
-        boolean mustCreate = true;
-
-        for(String name : this.namesFamily){
-            if(name.equals(autoCompleteTextView.getText().toString())){
-                mustCreate = false;
-                joinFamily();
-            }
-        }
-
-        if(mustCreate){
-            createFamily();
-        }
-
-    }
-
-    private void createFamily(){
-        AlertDialog.Builder builder = new AlertDialog.Builder(SignupActivity.this);
-
-        LayoutInflater inflater = getLayoutInflater();
-        View alertLayout = inflater.inflate(R.layout.dialog_signup, null);
-
-        final TextView family = (TextView) alertLayout.findViewById(R.id.family);
-        final EditText password = (EditText) alertLayout.findViewById(R.id.password);
-        final EditText retaperPassword = (EditText) alertLayout.findViewById(R.id.retaperPassword);
-
-        family.setText(autoCompleteTextView.getText().toString());
-
-        builder.setView(alertLayout)
-                .setPositiveButton("OK", (DialogInterface dialog, int id) -> {
-
-                    if(retaperPassword.getText().toString().equals(password.getText().toString())){
-                        List<String> requestParameters = new ArrayList<>();
-                        requestParameters.add("Authorization");
-                        requestParameters.add("Bearer "+sharedPref.getString("token",""));
-                        HttpRequestAsyncTaskJson httpRequestAsyncTask = new HttpRequestAsyncTaskJson(requestParameters);
-                        httpRequestAsyncTask.execute(PropertiesReader.properties.getProperty("url") +
-                                "api/family/createFamily?familyname="+autoCompleteTextView.getText().toString()+"&password="+password.getText().toString()+"&session_id="+sharedPref.getString("sessionId",""));
-
-                        try {
-                            response = (String) httpRequestAsyncTask.get().get("response");
-
-                            if(response.equals("OK")){
-                                startActivity(new Intent(SignupActivity.this, MainActivity.class));
-                                finish();
-                            }
-
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        } catch (ExecutionException e) {
-                            e.printStackTrace();
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    }else{
-                        Toast.makeText(this,"Les mots de passe ne sont pas les mêmes ! Impossible de créer cette famille",Toast.LENGTH_LONG).show();
-                    }
-                });
-        builder.create().show();
-    }
-
-    private void joinFamily(){
-        AlertDialog.Builder builder = new AlertDialog.Builder(SignupActivity.this);
-
-        LayoutInflater inflater = getLayoutInflater();
-        View alertLayout = inflater.inflate(R.layout.dialog_signup, null);
-
-        final TextView family = (TextView) alertLayout.findViewById(R.id.family);
-        final EditText password = (EditText) alertLayout.findViewById(R.id.password);
-        final EditText retaperPassword = (EditText) alertLayout.findViewById(R.id.retaperPassword);
-
-        family.setText(autoCompleteTextView.getText().toString());
-        retaperPassword.setVisibility(View.INVISIBLE);
-
-        builder.setView(alertLayout)
-                .setPositiveButton("OK", (dialog, id) -> {
-
-                    List<String> requestParameters = new ArrayList<>();
-                    requestParameters.add("Authorization");
-                    requestParameters.add("Bearer "+sharedPref.getString("token",""));
-                    HttpRequestAsyncTaskJson httpRequestAsyncTask = new HttpRequestAsyncTaskJson(requestParameters);
-                    httpRequestAsyncTask.execute(PropertiesReader.properties.getProperty("url") +
-                            "api/user/setFamilyForUser?username="+_emailText.getText().toString()+"&name_family="+autoCompleteTextView.getText().toString()+"&password_family="+password.getText().toString());
-
-                    try {
-                        response = (String) httpRequestAsyncTask.get().get("response");
-
-                        if(response.equals("OK")){
-                            startActivity(new Intent(SignupActivity.this, MainActivity.class));
-                            finish();
-                        }
-
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } catch (ExecutionException e) {
-                        e.printStackTrace();
-                    } catch (JSONException e) {
-                        e.printStackTrace();
-                    }
-
-                });
-        builder.create().show();
-
-        }
-
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     public void onSignupSuccess() {
         _signupButton.setEnabled(true);
         setResult(RESULT_OK, null);
-        Toast.makeText(SignupActivity.this,"Compte créé", Toast.LENGTH_LONG);
 
         LayoutInflater inflater = getLayoutInflater();
         View alertLayout = inflater.inflate(R.layout.activation_signup, null);
@@ -309,8 +214,8 @@ public class SignupActivity extends FragmentActivity {
         alert.setNegativeButton("Annuler", (dialog, which) -> Toast.makeText(getBaseContext(), "Activation annulée", Toast.LENGTH_SHORT).show());
 
         alert.setPositiveButton("Activer", (dialog, which) -> {
-            String code = mPinFirstDigitEditText.getText().toString()+mPinSecondDigitEditText.getText().toString()+
-                    mPinThirdDigitEditText.getText().toString()+mPinForthDigitEditText.getText().toString();
+            String code = mPinFirstDigitEditText.getText().toString() + mPinSecondDigitEditText.getText().toString() +
+                    mPinThirdDigitEditText.getText().toString() + mPinForthDigitEditText.getText().toString();
 
             final ProgressDialog progressDialog = new ProgressDialog(SignupActivity.this,
                     R.style.AppTheme_Dark_Dialog);
@@ -320,10 +225,10 @@ public class SignupActivity extends FragmentActivity {
 
             List<String> requestParameters = new ArrayList<>();
             requestParameters.add("Authorization");
-            requestParameters.add("Bearer "+sharedPref.getString("token",""));
+            requestParameters.add("Bearer " + sharedPref.getString("token", ""));
             HttpRequestGetAsyncTask httpRequestAsyncTask = new HttpRequestGetAsyncTask(requestParameters);
             httpRequestAsyncTask.execute(PropertiesReader.properties.getProperty("url") +
-                    "api/user/activateByPhone/"+code);
+                    "api/user/activateByPhone/" + code);
 
             try {
                 responseCode = httpRequestAsyncTask.get();
@@ -337,11 +242,11 @@ public class SignupActivity extends FragmentActivity {
             new android.os.Handler().postDelayed(
                     () -> {
 
-                        if(responseCode.equals("OK")){
+                        if (responseCode.equals("OK")) {
 
                             HttpRequestAsyncTaskJson httpRequestAsyncTaskJson = new HttpRequestAsyncTaskJson(requestParameters);
                             httpRequestAsyncTaskJson.execute(PropertiesReader.properties.getProperty("url") +
-                                    "api/user/login?username="+_emailText.getText().toString()+"&password="+_passwordText.getText().toString());
+                                    "api/user/login?username=" + _emailText.getText().toString() + "&password=" + _passwordText.getText().toString());
 
                             try {
                                 response = (String) httpRequestAsyncTaskJson.get().get("response");
@@ -349,7 +254,8 @@ public class SignupActivity extends FragmentActivity {
                                 if (response.contains("-")) {
                                     editor.putString("sessionId", response);
                                     editor.commit();
-                                    joinOrCreateFamily();
+                                    startActivity(new Intent(this, MainActivity.class));
+                                    finish();
                                 }
                             } catch (InterruptedException e) {
                                 e.printStackTrace();
@@ -358,9 +264,10 @@ public class SignupActivity extends FragmentActivity {
                             } catch (JSONException e) {
                                 e.printStackTrace();
                             }
-                            joinOrCreateFamily();
-                        }else {
-                            Toast.makeText(SignupActivity.this,"Le code renseigné n'est pas correct !",Toast.LENGTH_SHORT).show();
+                            this.errorAfterCode();
+                        } else {
+                            this.errorAfterCode();
+                            //TODO : Delete account + creation again and code
                         }
                         progressDialog.dismiss();
                     }, 3000);
@@ -373,7 +280,7 @@ public class SignupActivity extends FragmentActivity {
             mPinFirstDigitEditText.setFocusable(true);
             mPinFirstDigitEditText.setFocusableInTouchMode(true);
             mPinFirstDigitEditText.requestFocus();
-            imm.showSoftInput(mPinFirstDigitEditText,0);
+            imm.showSoftInput(mPinFirstDigitEditText, 0);
 
             mPinFirstDigitEditText.setOnKeyListener((v, keyCode, event) -> {
                 char pressedKey = (char) event.getUnicodeChar();
@@ -381,7 +288,7 @@ public class SignupActivity extends FragmentActivity {
                 mPinSecondDigitEditText.setFocusable(true);
                 mPinSecondDigitEditText.setFocusableInTouchMode(true);
                 mPinSecondDigitEditText.requestFocus();
-                imm.showSoftInput(mPinSecondDigitEditText,0);
+                imm.showSoftInput(mPinSecondDigitEditText, 0);
                 return true;
             });
 
@@ -391,7 +298,7 @@ public class SignupActivity extends FragmentActivity {
                 mPinThirdDigitEditText.setFocusable(true);
                 mPinThirdDigitEditText.setFocusableInTouchMode(true);
                 mPinThirdDigitEditText.requestFocus();
-                imm.showSoftInput(mPinThirdDigitEditText,0);
+                imm.showSoftInput(mPinThirdDigitEditText, 0);
                 return true;
             });
 
@@ -401,7 +308,7 @@ public class SignupActivity extends FragmentActivity {
                 mPinForthDigitEditText.setFocusable(true);
                 mPinForthDigitEditText.setFocusableInTouchMode(true);
                 mPinForthDigitEditText.requestFocus();
-                imm.showSoftInput(mPinForthDigitEditText,0);
+                imm.showSoftInput(mPinForthDigitEditText, 0);
                 return true;
             });
 
@@ -409,7 +316,7 @@ public class SignupActivity extends FragmentActivity {
                 char pressedKey = (char) event.getUnicodeChar();
                 mPinForthDigitEditText.setText(pressedKey + "");
                 InputMethodManager imm1 = (InputMethodManager) getSystemService(Service.INPUT_METHOD_SERVICE);
-                imm1.hideSoftInputFromInputMethod(mPinForthDigitEditText.getWindowToken(),0);
+                imm1.hideSoftInputFromInputMethod(mPinForthDigitEditText.getWindowToken(), 0);
                 return true;
             });
         });
@@ -417,7 +324,7 @@ public class SignupActivity extends FragmentActivity {
     }
 
     public void onSignupFailed() {
-        Toast.makeText(getBaseContext(), "Signup failed : "+response, Toast.LENGTH_LONG).show();
+        Toast.makeText(getBaseContext(), "Signup failed : " + response, Toast.LENGTH_LONG).show();
 
         _signupButton.setEnabled(true);
     }
@@ -445,7 +352,7 @@ public class SignupActivity extends FragmentActivity {
             _emailText.setError(null);
         }
 
-        if (mobile.isEmpty() || mobile.length()!=10) {
+        if (mobile.isEmpty() || mobile.length() != 10) {
             _mobileText.setError("Enter Valid Mobile Number");
             valid = false;
         } else {
@@ -467,6 +374,29 @@ public class SignupActivity extends FragmentActivity {
         }
 
         return valid;
+    }
+
+    private void errorAfterCode() {
+        Toast.makeText(SignupActivity.this, "Erreur durant la vérification !", Toast.LENGTH_LONG).show();
+
+        List<String> requestParameters = new ArrayList<>();
+        requestParameters.add("Authorization");
+        requestParameters.add("Bearer " + sharedPref.getString("token", ""));
+        HttpRequestAsyncTaskJson httpRequestAsyncTaskJson = new HttpRequestAsyncTaskJson(requestParameters);
+        httpRequestAsyncTaskJson.execute(PropertiesReader.properties.getProperty("url") +
+                "api/user/deleteUser?username=" + _emailText.getText().toString());
+
+        try {
+            response = (String) httpRequestAsyncTaskJson.get().get("response");
+
+            if(response.equals("OK")){
+                signup();
+            }else{
+                Toast.makeText(this, "Erreur durant le renvoi du code !", Toast.LENGTH_LONG).show();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }
